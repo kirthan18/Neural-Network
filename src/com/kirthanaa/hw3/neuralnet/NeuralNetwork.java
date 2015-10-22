@@ -1,9 +1,11 @@
 package com.kirthanaa.hw3.neuralnet;
 
 import com.kirthanaa.hw3.arffreader.ARFFReader;
-import com.kirthanaa.hw3.entities.Fractions;
+import com.kirthanaa.hw3.entities.NeuralNetOutput;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -13,7 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class NeuralNetwork {
 
-    private static final int NUM_CROSS_VALIDATION = 10;
+    private static final int NUM_CROSS_VALIDATION = 12;
 
     private static int mPositiveInstances = 0;
 
@@ -21,9 +23,11 @@ public class NeuralNetwork {
 
     private static double mClassRatio = 0.0;
 
-    private ArrayList<ArrayList<HashMap<String, Double>>> mStratifiedSamples = null;
+    private static ArrayList<ArrayList<HashMap<String, Double>>> mStratifiedSamples = null;
 
     private static int mTestSampleIndex = -1;
+
+    private static double[] mWeights = null;
 
     /**
      * Returns the output after applying sigmoidal function to the value given by argument
@@ -49,13 +53,12 @@ public class NeuralNetwork {
 
     /**
      * Implementing Fisher–Yates shuffle to shuffle the contents of the array
+     *
      * @param ar Array to be shuffled
      */
-    private static void shuffleArray(int[] ar, int length)
-    {
+    private static void shuffleArray(int[] ar, int length) {
         Random rnd = ThreadLocalRandom.current();
-        for (int i = length - 1; i > 0; i--)
-        {
+        for (int i = length - 1; i > 0; i--) {
             int index = rnd.nextInt(i + 1);
             // Simple swap
             int a = ar[index];
@@ -65,7 +68,13 @@ public class NeuralNetwork {
     }
 
 
+    /**
+     * Creates a 10 fold stratified sample set for cross validation
+     *
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     */
     private static void createStratifiedSamples(ARFFReader arffReader) {
+        mStratifiedSamples = new ArrayList<>(NUM_CROSS_VALIDATION);
         mTestSampleIndex = getRandomNumber(0, NUM_CROSS_VALIDATION - 1);
 
         int[] positiveInstanceIndex = new int[arffReader.getNumberOfDataInstances()];
@@ -83,30 +92,78 @@ public class NeuralNetwork {
                 positiveInstanceIndex[posIndex++] = i;
             }
         }
-        mClassRatio = (double)mPositiveInstances/(double)mNegativeInstances;
+        mClassRatio = (double) mPositiveInstances / (double) mNegativeInstances;
 
         shuffleArray(positiveInstanceIndex, posIndex);
         shuffleArray(negativeInstanceIndex, negIndex);
 
-        Fractions posToNeg = new Fractions(mPositiveInstances, mNegativeInstances);
+        double fractionPosInstance = (double) posIndex / (double) arffReader.getNumberOfDataInstances();
+        double fractionNegInstance = (double) negIndex / (double) arffReader.getNumberOfDataInstances();
 
-        int numInstancesPerFold = arffReader.getNumberOfDataInstances() / 10;
+        int numInstancesPerFold = arffReader.getNumberOfDataInstances() / NUM_CROSS_VALIDATION;
         int numPosInstancesPerFold = 0;
         int numNegInstancesPerFold = 0;
 
-        for(int i = 0; i < NUM_CROSS_VALIDATION; i++){
-            for(int j = 0; j < numInstancesPerFold; j++){
+        if (fractionPosInstance > fractionNegInstance) {
+            numPosInstancesPerFold = (int) (fractionPosInstance * numInstancesPerFold) + 1;
+            numNegInstancesPerFold = (int) (fractionNegInstance * numInstancesPerFold);
+        } else {
+            numPosInstancesPerFold = (int) (fractionPosInstance * numInstancesPerFold);
+            numNegInstancesPerFold = (int) (fractionNegInstance * numInstancesPerFold) + 1;
+        }
 
+        int posInstanceIndex = 0;
+        int negInstanceIndex = 0;
+
+        for (int i = 0; i < NUM_CROSS_VALIDATION; i++) {
+            int l = 0;
+            ArrayList<HashMap<String, Double>> instancesListPerFold = new ArrayList<>();
+            while (l < numInstancesPerFold) {
+
+                for (int k = 0; k < numPosInstancesPerFold; k++) {
+                    if (posInstanceIndex < posIndex) {
+
+                        instancesListPerFold.add(arffReader.getDataInstanceList().get(positiveInstanceIndex[posInstanceIndex++]));
+                        l++;
+                    }
+                }
+
+                for (int n = 0; n < numNegInstancesPerFold; n++) {
+                    if (negInstanceIndex < negIndex) {
+                        instancesListPerFold.add(arffReader.getDataInstanceList().get(negativeInstanceIndex[negInstanceIndex++]));
+                        l++;
+                    }
+                }
             }
+            mStratifiedSamples.add(i, instancesListPerFold);
+        }
+        int k = 0;
+        for (int i = posInstanceIndex; i < posIndex; i++) {
+            mStratifiedSamples.get(k).add(arffReader.getDataInstanceList().get(positiveInstanceIndex[i]));
+            k = (k + 1) % NUM_CROSS_VALIDATION;
+        }
+
+        for (int i = negInstanceIndex; i < negIndex; i++) {
+            mStratifiedSamples.get(k).add(arffReader.getDataInstanceList().get(negativeInstanceIndex[i]));
+            k = (k + 1) % NUM_CROSS_VALIDATION;
         }
     }
 
 
-    private static void trainNeuralNet(){
-
+    private static void trainNeuralNet(ARFFReader arffReader) {
+        ArrayList<NeuralNetOutput> classificationOutput = new ArrayList<NeuralNetOutput>(arffReader.getNumberOfDataInstances());
+        mWeights = new double[arffReader.getNumberOfAttributes() + 1]; //+1 for bias weight
+        Arrays.fill(mWeights, 0.1);
+        for(int i = 0; i < NUM_CROSS_VALIDATION; i++){
+            for(int j = 0; j < mStratifiedSamples.get(i).size(); j++){
+                for(int k = 0; k < arffReader.getNumberOfAttributes(); k++){
+                    //mStratifiedSamples
+                }
+            }
+        }
     }
 
-    private static void testNeuralNet(){
+    private static void testNeuralNet() {
 
     }
 
@@ -117,7 +174,7 @@ public class NeuralNetwork {
 
         createStratifiedSamples(arffReader);
 
-        trainNeuralNet();
+        trainNeuralNet(arffReader);
 
         testNeuralNet();
 
