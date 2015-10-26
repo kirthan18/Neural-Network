@@ -1,9 +1,11 @@
 package com.kirthanaa.hw3.entities;
 
+import java.util.Comparator;
+
 /**
  * Created by kirthanaaraghuraman on 10/21/15.
  */
-public class NeuralNetOutput {
+public class NeuralNetOutput implements Comparable<NeuralNetOutput>{
 
     private int mInstanceOrdinal = -1;
 
@@ -21,5 +23,21 @@ public class NeuralNetOutput {
         this.mPredictedClass = predictedClass;
         this.mActualClass = actualClass;
         this.mConfidence = confidence;
+    }
+
+    @Override
+    public int compareTo(NeuralNetOutput output) {
+        if (this.mInstanceOrdinal == output.mInstanceOrdinal) {
+            return 0;
+        } else if (this.mInstanceOrdinal > output.mInstanceOrdinal) {
+            return 1;
+        } else {
+            return -1;
+        }
+    }
+
+    public void printOutput(){
+        System.out.println(String.format("%2d",(this.mFold + 1)) + " " + this.mPredictedClass + " " + this.mActualClass
+                + " " + mConfidence);
     }
 }

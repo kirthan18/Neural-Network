@@ -159,11 +159,11 @@ public class ARFFReader {
                 mDataInstanceList.add(attributeHash);
                 //System.out.println("Instance value of attribute 1: " + data.instance(i).stringValue(1));
             }
-            System.out.println("Number of data instances added to list: " + mDataInstanceList.size());
+            //System.out.println("Number of data instances added to list: " + mDataInstanceList.size());
 
-            for(HashMap<String, Double> hashMap : mDataInstanceList){
+            /*for(HashMap<String, Double> hashMap : mDataInstanceList){
                 System.out.println(hashMap);
-            }
+            }*/
         }
     }
 
