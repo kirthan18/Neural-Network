@@ -1,6 +1,4 @@
-package com.kirthanaa.hw3.entities;
-
-import java.util.Comparator;
+package com.kirthanaa.hw2.entities;
 
 /**
  * Created by kirthanaaraghuraman on 10/21/15.
@@ -34,6 +32,14 @@ public class NeuralNetOutput implements Comparable<NeuralNetOutput>{
         } else {
             return -1;
         }
+    }
+
+    public String getActualClass() {
+        return this.mActualClass;
+    }
+
+    public String getPredictedClass() {
+        return this.mPredictedClass;
     }
 
     public void printOutput(){

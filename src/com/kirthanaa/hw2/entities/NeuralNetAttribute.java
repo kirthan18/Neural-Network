@@ -1,4 +1,4 @@
-package com.kirthanaa.hw3.entities;
+package com.kirthanaa.hw2.entities;
 
 /**
  * Created by kirthanaaraghuraman on 10/20/15.

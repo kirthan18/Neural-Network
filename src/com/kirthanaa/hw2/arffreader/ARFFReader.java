@@ -1,6 +1,6 @@
-package com.kirthanaa.hw3.arffreader;
+package com.kirthanaa.hw2.arffreader;
 
-import com.kirthanaa.hw3.entities.NeuralNetAttribute;
+import com.kirthanaa.hw2.entities.NeuralNetAttribute;
 import weka.core.Instances;
 import weka.core.converters.ArffLoader;
 
