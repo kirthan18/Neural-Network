@@ -2,6 +2,7 @@ package com.kirthanaa.hw2.neuralnet;
 
 import com.kirthanaa.hw2.arffreader.ARFFReader;
 import com.kirthanaa.hw2.entities.NeuralNetOutput;
+import com.kirthanaa.hw2.entities.ROCValues;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -200,39 +201,57 @@ public class NeuralNetwork {
 
     private static double crossValidate(ARFFReader arffReader) {
         mClassificationOutput = new ArrayList<>(arffReader.getNumberOfDataInstances());
-        double[] trainSetAccuracy = new double[mFolds];
-        double avgAccuracy = 0.0;
+        double foldAccuracy[] = new double[mFolds];
         for (int i = 0; i < mFolds; i++) {
-            double avg =0.0;
+            double avg = 0.0;
             mBias = 0.1;
             mWeights = new double[arffReader.getNumberOfAttributes()];
             Arrays.fill(mWeights, 0.1);
             int testFold = i;
-            double [] trainAccuracyEpoch = new double[mEpochs];
 
             for (int j = 0; j < mEpochs; j++) {
-                trainAccuracyEpoch[j] = trainNeuralNet(arffReader, testFold);
+                trainNeuralNet(arffReader, testFold);
             }
             /*System.out.println("\nFinal Weights: ");
             for(double weight : mWeights){
                 System.out.println(weight);
             }*/
 
-            double totalAccuracy = 0.0;
-            for (double accuracy : trainAccuracyEpoch) {
-                totalAccuracy += accuracy;
+            int correctTrainSetPrediction = 0;
+            int totalTrainSetPrediction = 0;
+
+            for (int t = 0; t < arffReader.getNumberOfDataInstances(); t++) {
+                if (foldList[t] != testFold) {
+                    totalTrainSetPrediction++;
+                    double weightSum = 0.0;
+                    for (int j = 0; j < arffReader.getNumberOfAttributes(); j++) {
+                        weightSum = weightSum + (mWeights[j] * arffReader.getDataInstanceList().get(t)
+                                .get(arffReader.getAttributeList().get(j).getAttributeName()));
+                    }
+                    double outputWeight = weightSum + mBias;
+                    double predictedOutput = getSigmoidalOutput(outputWeight);
+                    String predictedClass = "";
+                    if (predictedOutput > 0.5) {
+                        predictedClass = arffReader.mClassLabels[1];
+                    } else {
+                        predictedClass = arffReader.mClassLabels[0];
+                    }
+                    //String actualClass = arffReader.mClassLabelList.get(testFoldInstanceIndexList.get(i));
+                    String actualClass = arffReader.mClassLabelList.get(t);
+
+                    if (actualClass.equalsIgnoreCase(predictedClass)) {
+                        correctTrainSetPrediction++;
+                    }
+                }
             }
-            avg = totalAccuracy / mEpochs;
-            trainSetAccuracy[i] = avg;
+            foldAccuracy[i] = (double) correctTrainSetPrediction / (double) totalTrainSetPrediction;
             testNeuralNet(testFold, arffReader);
         }
-
-        double sumAccuracy = 0.0;
-        for (double accuracy : trainSetAccuracy) {
-            sumAccuracy += accuracy;
+        double sum = 0.0;
+        for (double avg : foldAccuracy) {
+            sum += avg;
         }
-        avgAccuracy = sumAccuracy / mFolds;
-        return avgAccuracy;
+        return sum / foldAccuracy.length;
     }
 
     private static void updateWeightAndBias(double delta, ARFFReader arffReader, int instanceIndex) {
@@ -245,7 +264,7 @@ public class NeuralNetwork {
         mBias = mBias + delta;
     }
 
-    private static double trainNeuralNet(ARFFReader arffReader, int testFold) {
+    private static void trainNeuralNet(ARFFReader arffReader, int testFold) {
         /*for (int m = 0; m < mStratifiedSamples.size(); m++) {
             if (m == testFold) {
                 continue;
@@ -289,12 +308,10 @@ public class NeuralNetwork {
                 }
             }
         }*/
-
-        int numTestInstances = 0;
         mCorrectlyClassifiedTrainSet = 0;
+
         for (int i = 0; i < arffReader.getNumberOfDataInstances(); i++) {
             if (foldList[i] == testFold) {
-                numTestInstances++;
                 continue;
             } else {
                 double weightSum = 0.0;
@@ -324,8 +341,6 @@ public class NeuralNetwork {
                 updateWeightAndBias(delta, arffReader, i);
             }
         }
-        double epochAccuracy = (double) mCorrectlyClassifiedTrainSet / (double) (arffReader.getNumberOfDataInstances() - numTestInstances);
-        return epochAccuracy;
     }
 
     private static void testNeuralNet(int testFold, ARFFReader arffReader) {
@@ -415,33 +430,65 @@ public class NeuralNetwork {
     private static void computeValuesForROC(ARFFReader arffReader) {
         mEpochs = 100;
         mLearningRate = 0.1;
-        int truePositive = 0;
-        int trueNegative = 0;
-        int falsePositive = 0;
-        int falseNegative = 0;
+        int totalTruePositive = 0;
+        int totalTrueNegative = 0;
+        int totalFalsePositive = 0;
+        int totalFalseNegative = 0;
 
+        ArrayList<ROCValues> rocValuesList = new ArrayList<>(arffReader.getNumberOfDataInstances());
         crossValidate(arffReader);
         for (NeuralNetOutput neuralNetOutput : mClassificationOutput) {
             if (neuralNetOutput.getActualClass().equalsIgnoreCase(neuralNetOutput.getPredictedClass())) {
                 if (neuralNetOutput.getActualClass().equalsIgnoreCase("Rock")) {
-                    trueNegative++;
+                    totalTrueNegative++;
                 } else if (neuralNetOutput.getActualClass().equalsIgnoreCase("Mine")) {
-                    truePositive++;
+                    totalTruePositive++;
                 }
             } else {
                 if (neuralNetOutput.getActualClass().equalsIgnoreCase("Mine")) {
                     if (neuralNetOutput.getPredictedClass().equalsIgnoreCase("Rock")) {
-                        falseNegative++;
+                        totalFalseNegative++;
                     }
-                } else if (neuralNetOutput.getPredictedClass().equalsIgnoreCase("Rock")) {
+                } else if (neuralNetOutput.getActualClass().equalsIgnoreCase("Rock")) {
                     if (neuralNetOutput.getPredictedClass().equalsIgnoreCase("Mine")) {
-                        falsePositive++;
+                        totalFalsePositive++;
                     }
                 }
 
             }
         }
 
+        int truePositive = 0;
+        int falsePositive = 0;
+
+        Collections.sort(mClassificationOutput);
+        for (NeuralNetOutput neuralNetOutput : mClassificationOutput) {
+            if (neuralNetOutput.getActualClass().equalsIgnoreCase(neuralNetOutput.getPredictedClass())) {
+                if (neuralNetOutput.getActualClass().equalsIgnoreCase("Mine")) {
+                    truePositive++;
+                }
+            } else {
+                if (neuralNetOutput.getActualClass().equalsIgnoreCase("Rock")) {
+                    if (neuralNetOutput.getPredictedClass().equalsIgnoreCase("Mine")) {
+                        falsePositive++;
+                    }
+                }
+            }
+            ROCValues rocValue = new ROCValues((double)truePositive/(double)mPositiveInstances,
+                    (double)falsePositive/(double)mNegativeInstances);
+            rocValuesList.add(rocValue);
+        }
+
+        for(ROCValues value : rocValuesList){
+            System.out.println(value.getTruePositiveRate());
+        }
+        System.out.println("Roc values length : " + rocValuesList.size());
+
+        for(ROCValues value : rocValuesList){
+            System.out.println(value.getFalsePositiveRate());
+        }
+
+        System.out.println("Roc values length : " + rocValuesList.size());
     }
 
     public static void main(String args[]) {
@@ -456,13 +503,13 @@ public class NeuralNetwork {
 
         createStratifiedSamples(arffReader);
 
-        //crossValidate(arffReader);
+        crossValidate(arffReader);
 
-        //printOutput(arffReader);
+        printOutput(arffReader);
 
-        System.out.println("Accuracy : " + ((double) mCorrectlyClassifiedTestSet) / (double) arffReader.getNumberOfDataInstances());
+        //System.out.println("Accuracy : " + ((double) mCorrectlyClassifiedTestSet) / (double) arffReader.getNumberOfDataInstances());
 
-        question5(arffReader);
+        //question5(arffReader);
 
         //computeValuesForROC(arffReader);
     }

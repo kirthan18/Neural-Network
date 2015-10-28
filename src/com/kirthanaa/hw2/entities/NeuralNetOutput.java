@@ -25,9 +25,16 @@ public class NeuralNetOutput implements Comparable<NeuralNetOutput>{
 
     @Override
     public int compareTo(NeuralNetOutput output) {
-        if (this.mInstanceOrdinal == output.mInstanceOrdinal) {
+        /*if (this.mInstanceOrdinal == output.mInstanceOrdinal) {
             return 0;
         } else if (this.mInstanceOrdinal > output.mInstanceOrdinal) {
+            return 1;
+        } else {
+            return -1;
+        }*/
+        if (this.mConfidence == output.mConfidence) {
+            return 0;
+        } else if (this.mConfidence < output.mConfidence) {
             return 1;
         } else {
             return -1;
