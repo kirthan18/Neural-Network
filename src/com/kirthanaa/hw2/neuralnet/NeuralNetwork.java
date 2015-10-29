@@ -12,31 +12,59 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class NeuralNetwork {
 
+    /**
+     * Number of folds to create
+     */
     private static int mFolds = 0;
 
+    /**
+     * Number of epochs to train
+     */
     private static int mEpochs = 0;
 
+    /**
+     * Learning rate of neural network
+     */
     private static double mLearningRate = 0.0;
 
+    /**
+     * Number of positive instances in data set
+     */
     private static int mPositiveInstances = 0;
 
+    /**
+     * Number of negative instances in data set
+     */
     private static int mNegativeInstances = 0;
 
+    /**
+     * List with details of which fold each instance is assigned to
+     */
     private static int foldList[] = null;
 
     private static ArrayList<ArrayList<HashMap<String, Double>>> mStratifiedSamples = null;
 
+    /**
+     * Array of weights for connections between input and output units
+     */
     private static double[] mWeights = null;
 
+    /**
+     * Bias value for the neural network
+     */
     private static double mBias = 0.0;
 
     private static ArrayList<ArrayList<Integer>> mIndexList = null;
 
+    /**
+     * List of outputs containing various details
+     */
     private static ArrayList<NeuralNetOutput> mClassificationOutput = null;
 
+    /**
+     * Number of correctly classified test instances
+     */
     private static int mCorrectlyClassifiedTestSet = 0;
-
-    private static int mCorrectlyClassifiedTrainSet = 0;
 
 
     /**
@@ -79,7 +107,7 @@ public class NeuralNetwork {
 
 
     /**
-     * Creates a 10 fold stratified sample set for cross validation
+     * Creates a n fold stratified sample set for cross validation
      *
      * @param arffReader ARFF Reader instance containing details about the learning set
      */
@@ -117,14 +145,6 @@ public class NeuralNetwork {
         numPosInstancesPerFold = (int) (fractionPosInstance * numInstancesPerFold);
         numNegInstancesPerFold = (int) (numInstancesPerFold - numPosInstancesPerFold);
 
-        /*if (fractionPosInstance > fractionNegInstance) {
-            numPosInstancesPerFold = (int) (fractionPosInstance * numInstancesPerFold) + 1;
-            numNegInstancesPerFold = (int) (fractionNegInstance * numInstancesPerFold);
-        } else {
-            numPosInstancesPerFold = (int) (fractionPosInstance * numInstancesPerFold);
-            numNegInstancesPerFold = (int) (fractionNegInstance * numInstancesPerFold) + 1;
-        }*/
-
         int posInstanceIndex = 0;
         int negInstanceIndex = 0;
 
@@ -134,27 +154,6 @@ public class NeuralNetwork {
             int l = 0;
             ArrayList<HashMap<String, Double>> instancesListPerFold = new ArrayList<>();
             ArrayList<Integer> instancesIndexPerFold = new ArrayList<>();
-            /*while (l < numInstancesPerFold) {
-
-                for (int k = 0; k < numPosInstancesPerFold; k++) {
-                    if (posInstanceIndex < posInstanceSize) {
-                        instancesIndexPerFold.add(positiveInstanceIndex[posInstanceIndex]);
-                        foldList[positiveInstanceIndex[posInstanceIndex]] = i;
-                        instancesListPerFold.add(arffReader.getDataInstanceList().get(positiveInstanceIndex[posInstanceIndex++]));
-                        l++;
-                    }
-                }
-
-                for (int n = 0; n < numNegInstancesPerFold; n++) {
-                    if (negInstanceIndex < negInstanceSize) {
-                        foldList[negativeInstanceIndex[negInstanceIndex]] = i;
-                        instancesIndexPerFold.add(negativeInstanceIndex[negInstanceIndex]);
-                        instancesListPerFold.add(arffReader.getDataInstanceList().get(negativeInstanceIndex[negInstanceIndex++]));
-                        l++;
-                    }
-                }
-            }*/
-
 
             for (int p = 0; p < numPosInstancesPerFold; p++) {
                 if (posInstanceIndex < posInstanceSize) {
@@ -172,24 +171,23 @@ public class NeuralNetwork {
                 }
             }
 
-            mStratifiedSamples.add(i, instancesListPerFold);
-            mIndexList.add(i, instancesIndexPerFold);
+            //mStratifiedSamples.add(i, instancesListPerFold);
+            //mIndexList.add(i, instancesIndexPerFold);
         }
         int k = mFolds - 1;
         for (int i = posInstanceIndex; i < posInstanceSize; i++) {
-            mIndexList.get(k).add(positiveInstanceIndex[i]);
+            //mIndexList.get(k).add(positiveInstanceIndex[i]);
             foldList[i] = k;
-            mStratifiedSamples.get(k).add(arffReader.getDataInstanceList().get(positiveInstanceIndex[i]));
+            //mStratifiedSamples.get(k).add(arffReader.getDataInstanceList().get(positiveInstanceIndex[i]));
             k = (k + 1) % mFolds;
         }
 
         for (int i = negInstanceIndex; i < negInstanceSize; i++) {
             foldList[i] = k;
-            mIndexList.get(k).add(negativeInstanceIndex[i]);
-            mStratifiedSamples.get(k).add(arffReader.getDataInstanceList().get(negativeInstanceIndex[i]));
+            //mIndexList.get(k).add(negativeInstanceIndex[i]);
+            //mStratifiedSamples.get(k).add(arffReader.getDataInstanceList().get(negativeInstanceIndex[i]));
             k = (k + 1) % mFolds;
         }
-
 
         /*for(int i = 0; i < mStratifiedSamples.size(); i++){
             for (int j = 0; j < mStratifiedSamples.get(i).size(); j++){
@@ -199,6 +197,12 @@ public class NeuralNetwork {
 
     }
 
+    /**
+     * Trains and tests the neural network using stratified cross validation
+     *
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     * @return Average train set accuracy
+     */
     private static double crossValidate(ARFFReader arffReader) {
         mClassificationOutput = new ArrayList<>(arffReader.getNumberOfDataInstances());
         double foldAccuracy[] = new double[mFolds];
@@ -236,7 +240,6 @@ public class NeuralNetwork {
                     } else {
                         predictedClass = arffReader.mClassLabels[0];
                     }
-                    //String actualClass = arffReader.mClassLabelList.get(testFoldInstanceIndexList.get(i));
                     String actualClass = arffReader.mClassLabelList.get(t);
 
                     if (actualClass.equalsIgnoreCase(predictedClass)) {
@@ -254,6 +257,13 @@ public class NeuralNetwork {
         return sum / foldAccuracy.length;
     }
 
+    /**
+     * Updates weight and bias parameters for the neural network
+     *
+     * @param delta         Error between actual and predicted class
+     * @param arffReader    ARFF Reader instance containing details about the learning set
+     * @param instanceIndex Index of instance whose values should be used in weight updation
+     */
     private static void updateWeightAndBias(double delta, ARFFReader arffReader, int instanceIndex) {
 
         for (int i = 0; i < arffReader.getNumberOfAttributes(); i++) {
@@ -264,54 +274,18 @@ public class NeuralNetwork {
         mBias = mBias + delta;
     }
 
+    /**
+     * Trains the neural network on all folds except the test fold
+     * Trains for specified number of epochs
+     *
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     * @param testFold   Fold that is set aside for testing
+     */
     private static void trainNeuralNet(ARFFReader arffReader, int testFold) {
-        /*for (int m = 0; m < mStratifiedSamples.size(); m++) {
-            if (m == testFold) {
-                continue;
-            } else {
-                for (int n = 0; n < mStratifiedSamples.get(m).size(); n++) {
-                    double predictedOutput = -1;
-                    double actualOutput = -1;
-                    double delta = 0.0;
-
-                    if (arffReader.mClassLabelList.get(mIndexList.get(m).get(n)).equalsIgnoreCase("Rock")) {
-                        predictedOutput = 0.0;
-                    } else if (arffReader.mClassLabelList.get(mIndexList.get(m).get(n)).equalsIgnoreCase("Mine")) {
-                        predictedOutput = 1.0;
-                    }
-
-                    ArrayList<HashMap<String, Double>> currentFoldSampleList = mStratifiedSamples.get(m);
-                    for (int k = 0; k < currentFoldSampleList.size(); k++) {
-                        double weightSum = 0.0;
-
-                        for (int l = 0; l < currentFoldSampleList.get(k).size(); l++) {
-                            double attributeValue = currentFoldSampleList.get(k).get(arffReader.getAttributeList().get(l).getAttributeName());
-                            weightSum = weightSum + (attributeValue * mWeights[l]);
-                        }
-                        //System.out.println("Weight sum : " + weightSum);
-                        weightSum = weightSum + (1 * mBias);
-                        actualOutput = getSigmoidalOutput(weightSum);
-
-                        if(actualOutput > 0.5){
-                            actualOutput = 1.0;
-                        }else{
-                            actualOutput = 0.0;
-                        }
-
-                        delta = (actualOutput) * (1 - actualOutput) * (predictedOutput - actualOutput);
-                        //System.out.println("Delta : " + delta);
-                        updateWeightAndBias(delta, arffReader, mIndexList.get(m).get(k));
-
-                        //System.out.println("Sum of weights for instance " + k + " is : " + weightSum);
-                    }
-
-                }
-            }
-        }*/
-        mCorrectlyClassifiedTrainSet = 0;
-
-
-        /*for (int f = 0; f < mFolds; f++) {
+        /**
+         * Shuffling instances within each fold
+         */
+        for (int f = 0; f < mFolds; f++) {
             int[] foldInstanceIndex = new int[10000];
             int foldIndex = 0;
 
@@ -330,7 +304,6 @@ public class NeuralNetwork {
                 for (int k = 0; k < foldIndex; k++) {
                     double weightSum = 0.0;
                     double actualOutput = -1;
-                    String predictedClass = "";
 
                     if (arffReader.mClassLabelList.get(foldInstanceIndex[k]).equalsIgnoreCase(arffReader.mClassLabels[0])) {
                         actualOutput = 0.0;
@@ -342,27 +315,21 @@ public class NeuralNetwork {
                     }
                     weightSum = weightSum + (1 * mBias);
                     double predOutput = getSigmoidalOutput(weightSum);
-                    if (predOutput > 0.5) {
-                        predictedClass = arffReader.mClassLabels[1];
-                    } else {
-                        predictedClass = arffReader.mClassLabels[0];
-                    }
-
-                    if (predictedClass.equalsIgnoreCase(arffReader.mClassLabelList.get(foldInstanceIndex[k]))) {
-                        mCorrectlyClassifiedTrainSet++;
-                    }
                     double delta = (predOutput) * (1 - predOutput) * (actualOutput - predOutput);
                     updateWeightAndBias(delta, arffReader, foldInstanceIndex[k]);
                 }
             }
-        }*/
-        for (int i = 0; i < arffReader.getNumberOfDataInstances(); i++) {
+        }
+
+        /**
+         * Without shuffling instances within each fold
+         */
+        /*for (int i = 0; i < arffReader.getNumberOfDataInstances(); i++) {
             if (foldList[i] == testFold) {
                 continue;
             } else {
                 double weightSum = 0.0;
                 double actualOutput = -1;
-                String predictedClass = "";
 
                 if (arffReader.mClassLabelList.get(i).equalsIgnoreCase(arffReader.mClassLabels[0])) {
                     actualOutput = 0.0;
@@ -374,48 +341,21 @@ public class NeuralNetwork {
                 }
                 weightSum = weightSum + (1 * mBias);
                 double predOutput = getSigmoidalOutput(weightSum);
-                if (predOutput > 0.5) {
-                    predictedClass = arffReader.mClassLabels[1];
-                } else {
-                    predictedClass = arffReader.mClassLabels[0];
-                }
 
-                if (predictedClass.equalsIgnoreCase(arffReader.mClassLabelList.get(i))) {
-                    mCorrectlyClassifiedTrainSet++;
-                }
                 double delta = (predOutput) * (1 - predOutput) * (actualOutput - predOutput);
                 updateWeightAndBias(delta, arffReader, i);
             }
-        }
+        }*/
     }
 
+
+    /**
+     * Tests the trained neural network on the test fold instances
+     *
+     * @param testFold   Fold that is kept for testing
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     */
     private static void testNeuralNet(int testFold, ARFFReader arffReader) {
-        /*ArrayList<HashMap<String, Double>> testFoldInstanceList = mStratifiedSamples.get(testFold);
-        ArrayList<Integer> testFoldInstanceIndexList = mIndexList.get(testFold);
-
-        for (int i = 0; i < testFoldInstanceList.size(); i++) {
-            double weightSum = 0.0;
-            for (int j = 0; j < arffReader.getNumberOfAttributes(); j++) {
-                weightSum = weightSum + (mWeights[j] * testFoldInstanceList.get(i).
-                        get(arffReader.getAttributeList().get(j).getAttributeName()));
-            }
-            double outputWeight = weightSum + mBias;
-            double predictedOutput = getSigmoidalOutput(outputWeight);
-            String predictedClass = "";
-            if (predictedOutput > 0.5) {
-                predictedClass = "Mine";
-            } else {
-                predictedClass = "Rock";
-            }
-            String actualClass = arffReader.mClassLabelList.get(testFoldInstanceIndexList.get(i));
-
-            if(actualClass.equalsIgnoreCase(predictedClass)){
-                mCorrectlyClassifiedTestSet++;
-            }
-
-            NeuralNetOutput neuralNetOutput = new NeuralNetOutput(testFoldInstanceIndexList.get(i), testFold, predictedClass,
-                    actualClass, predictedOutput);
-            mClassificationOutput.add(neuralNetOutput);*/
 
         for (int i = 0; i < arffReader.getNumberOfDataInstances(); i++) {
             if (foldList[i] == testFold) {
@@ -432,7 +372,7 @@ public class NeuralNetwork {
                 } else {
                     predictedClass = arffReader.mClassLabels[0];
                 }
-                //String actualClass = arffReader.mClassLabelList.get(testFoldInstanceIndexList.get(i));
+
                 String actualClass = arffReader.mClassLabelList.get(i);
 
                 if (actualClass.equalsIgnoreCase(predictedClass)) {
@@ -446,6 +386,11 @@ public class NeuralNetwork {
     }
 
 
+    /**
+     * Prints the output in desired format
+     *
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     */
     private static void printOutput(ARFFReader arffReader) {
         Collections.sort(mClassificationOutput);
         for (int i = 0; i < arffReader.getNumberOfDataInstances(); i++) {
@@ -453,6 +398,11 @@ public class NeuralNetwork {
         }
     }
 
+    /**
+     * Computes train and test set accuracy for 1, 10, 100 and 1000 epochs
+     *
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     */
     private static void question5(ARFFReader arffReader) {
         int[] epochs = {1, 10, 100, 1000};
         double[] testAccuracyForDiffEpochs = new double[4];
@@ -473,6 +423,11 @@ public class NeuralNetwork {
     }
 
 
+    /**
+     * Computes true and false positive rate for plotting ROC Curve
+     *
+     * @param arffReader ARFF Reader instance containing details about the learning set
+     */
     private static void computeValuesForROC(ARFFReader arffReader) {
         mEpochs = 100;
         mLearningRate = 0.1;
@@ -501,7 +456,6 @@ public class NeuralNetwork {
                         totalFalsePositive++;
                     }
                 }
-
             }
         }
 
@@ -538,8 +492,8 @@ public class NeuralNetwork {
         System.out.println("Roc values length : " + rocValuesList.size());
     }
 
-    public static void main(String args[]) {
 
+    public static void main(String args[]) {
         String inputFile = args[0];
         mFolds = Integer.parseInt(args[1]);
         mLearningRate = Double.parseDouble(args[2]);
